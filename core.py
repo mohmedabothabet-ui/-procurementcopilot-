@@ -57,15 +57,28 @@ def parse_whatsapp(text, supplier):
             discount=float(d.group(1).replace(",", ".")) if d else 0, min_qty=int(q.group(1)) if q else 0))
     return rows
 
+def fix_stock(stock):
+    m = {}
+    for c in stock.columns:
+        s = str(c).lower()
+        if any(w in s for w in ["item", "صنف", "اسم", "name"]): m.setdefault("item", c)
+        elif any(w in s for w in ["monthly", "sales", "مبيعات", "شهري"]): m.setdefault("monthly_sales", c)
+        elif any(w in s for w in ["stock", "مخزون", "رصيد", "كمية"]): m.setdefault("stock", c)
+    stock = stock.rename(columns={v: k for k, v in m.items()})
+    for k in ["item", "stock", "monthly_sales"]:
+        if k not in stock.columns: raise ValueError("عمود ناقص في ملف المخزون: " + k)
+    return stock
+
 def compare(offers, stock, cover_days=45):
+    stock = fix_stock(stock)
     st = {str(r["item"]).strip(): r for _, r in stock.iterrows()}
     out, unmatched = [], []
     for o in offers:
-        k = difflib.get_close_matches(o["item"], list(st), n=1, cutoff=0.6)
+        k = difflib.get_close_matches(o["item"], list(st), n=1, cutoff=0.5)
         if not k: unmatched.append(o); continue
         o = dict(o, item=k[0]); o["net"] = round(o["price"] * (1 - o["discount"] / 100), 2); out.append(o)
     df = pd.DataFrame(out)
-    if df.empty: return df, df, pd.DataFrame(unmatched)
+    if df.empty: return df, pd.DataFrame(), pd.DataFrame(unmatched)
     rows = []
     for item, g in df.groupby("item"):
         g = g.sort_values("net"); best = g.iloc[0]; worst = g.iloc[-1]

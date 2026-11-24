@@ -14,11 +14,23 @@ if files and stockf:
         if f.name.endswith("xlsx"): offers += parse_excel(f, sup)
         elif f.name.endswith("pdf"): offers += parse_pdf(f, sup)
         else: offers += parse_whatsapp(f.read().decode("utf-8", "ignore"), sup)
-    stock = pd.read_excel(stockf)
-    allo, cmp_, un = compare(offers, stock, days)
+    st.write(f"تم قراءة {len(offers)} عرض")
+    if not offers:
+        st.error("ما قدرتش أقرا أي عروض من الملفات. اتأكد إن فيها أعمدة صنف وسعر.")
+        st.stop()
+    try:
+        stock = pd.read_excel(stockf)
+        allo, cmp_, un = compare(offers, stock, days)
+    except Exception as e:
+        st.error(str(e)); st.stop()
+    if len(un): st.warning("أصناف مش متطابقة مع المخزون"); st.dataframe(pd.DataFrame(un))
+    if cmp_.empty:
+        st.error("مفيش صنف من العروض اتطابق مع ملف المخزون. اتأكد إن أسماء الأصناف متشابهة.")
+        st.stop()
     st.subheader("المقارنة"); st.dataframe(cmp_, use_container_width=True)
     st.subheader("كل العروض"); st.dataframe(allo, use_container_width=True)
-    if len(un): st.warning("أصناف مش متطابقة مع المخزون"); st.dataframe(un)
     b = io.BytesIO()
-    with pd.ExcelWriter(b) as w: cmp_.to_excel(w, "المقارنة", index=False); allo.to_excel(w, "العروض", index=False)
+    with pd.ExcelWriter(b, engine="openpyxl") as w:
+        cmp_.to_excel(w, sheet_name="comparison", index=False)
+        allo.to_excel(w, sheet_name="offers", index=False)
     st.download_button("حمّل النتيجة إكسيل", b.getvalue(), "comparison.xlsx")
