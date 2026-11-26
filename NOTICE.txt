@@ -1,0 +1,4 @@
+Drug name dictionary (drugs_dict.csv)
+Source: eg-drugs — Egyptian Drug Database (https://github.com/mahmoudfalous/eg-drugs)
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+Only the English and Arabic name columns are bundled; prices and other fields are not used.
