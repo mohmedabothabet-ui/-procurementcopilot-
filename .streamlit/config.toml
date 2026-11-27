@@ -1,0 +1,8 @@
+[theme]
+primaryColor = "#0d7377"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f6f6"
+textColor = "#1a2e2e"
+
+[server]
+enableStaticServing = true
