@@ -442,7 +442,7 @@ def _go(p):
     st.session_state["_page"] = p
 
 if _page == "home":
-    st.markdown("""<div class='hero'><span class='hero-badge'>📂 نسخة 58.1 - رفع العروض مظبوط</span>
+    st.markdown("""<div class='hero'><span class='hero-badge'>🔍 نسخة 58.2 - زرار مقارنة العروض</span>
 <h1>مساعد الصيدلي</h1>
 <p>مشتريات صيدليتك في مكان واحد: المخزون، العروض، المقارنة، والأسعار - من ملفك على جهازك.</p>
 </div>""", unsafe_allow_html=True)
@@ -901,22 +901,42 @@ if _page == "offers":
     months = st.session_state.get("months_in", 6)
     stock_df = st.session_state.get("_stock_df_cache")
     st.subheader("٣) عروض الموردين والمقارنة")
-    _ft = ["xlsx", "pdf", "txt"]
-    _f1 = st.file_uploader("عرض المورد الأول (إكسيل / PDF / نص واتس)", type=_ft, key="offer1")
-    _f2 = st.file_uploader("عرض المورد التاني (اختياري)", type=_ft, key="offer2")
-    _f3 = st.file_uploader("عرض المورد التالت (اختياري)", type=_ft, key="offer3")
-    files = [x for x in (_f1, _f2, _f3) if x is not None]
-    if files and stock_df is not None:
+    st.caption("ارفع العروض في الخانات وبعدين دوس «قارن العروض» — الزرار هو اللي بيشغّل المقارنة.")
+    with st.form("offers_form"):
+        _ft = ["xlsx", "pdf", "txt"]
+        _f1 = st.file_uploader("عرض المورد الأول (إكسيل / PDF / نص واتس)", type=_ft, key="offer1")
+        _f2 = st.file_uploader("عرض المورد التاني (اختياري)", type=_ft, key="offer2")
+        _f3 = st.file_uploader("عرض المورد التالت (اختياري)", type=_ft, key="offer3")
+        _go = st.form_submit_button("🔍 قارن العروض")
+    if _go:
+        _files = [x for x in (_f1, _f2, _f3) if x is not None]
+        if _files and stock_df is not None:
+            _packed = []
+            for f in _files:
+                base = f.name.rsplit(".", 1)[0]
+                guess = guess_supplier_name(f, base) if f.name.endswith("xlsx") else base
+                try:
+                    if f.name.endswith("xlsx"): _rows = parse_excel(f, guess)
+                    elif f.name.endswith("pdf"): _rows = parse_pdf(f, guess)
+                    else: _rows = parse_whatsapp(f.read().decode("utf-8", "ignore"), guess)
+                except Exception as _e:
+                    _rows = []
+                    st.error(f"ملف {f.name} ما اتقرياش: {_e}")
+                _packed.append({"key": f.name, "guess": guess, "rows": _rows})
+            st.session_state["offers_packed"] = _packed
+        elif not _files:
+            st.warning("ارفع عرض واحد على الأقل الأول، وبعدين دوس «قارن العروض».")
+    _packed = st.session_state.get("offers_packed")
+    if _packed and stock_df is not None:
         offers = []
-        for f in files:
-            base = f.name.rsplit(".", 1)[0]
-            guess = guess_supplier_name(f, base) if f.name.endswith("xlsx") else base
-            sup = st.text_input(f"اسم المورد (ملف: {f.name})", value=guess, key=f"sup_{f.name}")
-            sup = sup.strip() or base
-            if f.name.endswith("xlsx"): offers += parse_excel(f, sup)
-            elif f.name.endswith("pdf"): offers += parse_pdf(f, sup)
-            else: offers += parse_whatsapp(f.read().decode("utf-8", "ignore"), sup)
+        for p in _packed:
+            sup = st.text_input(f"اسم المورد (ملف: {p['key']})", value=p["guess"], key=f"sup_{p['key']}")
+            sup = sup.strip() or p["guess"]
+            for _r in p["rows"]:
+                _r = dict(_r); _r["supplier"] = sup
+                offers.append(_r)
         st.write(f"تم قراءة {len(offers)} عرض")
+        st.caption("لو غيّرت أي ملف فوق، دوس «قارن العروض» تاني عشان يتقري من الأول.")
         if not offers:
             st.error("ما قدرتش أقرا أي عروض من الملفات. اتأكد إن فيها أعمدة صنف وسعر.")
             st.stop()
@@ -1742,4 +1762,4 @@ if _page == "download":
     _dl = st.session_state["mydata_dl_bytes"]
     st.download_button("حمّل بياناتي.xlsx المحدّث (خزّنه عندك)", _dl, "بياناتي.xlsx")
 
-st.caption(f"نسخة 58.1 · Streamlit {st.__version__}")
+st.caption(f"نسخة 58.2 · Streamlit {st.__version__}")
