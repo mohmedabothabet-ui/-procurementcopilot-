@@ -442,7 +442,7 @@ def _go(p):
     st.session_state["_page"] = p
 
 if _page == "home":
-    st.markdown("""<div class='hero'><span class='hero-badge'>⚖️ نسخة 58 - قارن عرض بعرض</span>
+    st.markdown("""<div class='hero'><span class='hero-badge'>📂 نسخة 58.1 - رفع العروض مظبوط</span>
 <h1>مساعد الصيدلي</h1>
 <p>مشتريات صيدليتك في مكان واحد: المخزون، العروض، المقارنة، والأسعار - من ملفك على جهازك.</p>
 </div>""", unsafe_allow_html=True)
@@ -901,7 +901,11 @@ if _page == "offers":
     months = st.session_state.get("months_in", 6)
     stock_df = st.session_state.get("_stock_df_cache")
     st.subheader("٣) عروض الموردين والمقارنة")
-    files = st.file_uploader("عروض الموردين (إكسيل / PDF / نص واتس)", accept_multiple_files=True, type=["xlsx", "pdf", "txt"])
+    _ft = ["xlsx", "pdf", "txt"]
+    _f1 = st.file_uploader("عرض المورد الأول (إكسيل / PDF / نص واتس)", type=_ft, key="offer1")
+    _f2 = st.file_uploader("عرض المورد التاني (اختياري)", type=_ft, key="offer2")
+    _f3 = st.file_uploader("عرض المورد التالت (اختياري)", type=_ft, key="offer3")
+    files = [x for x in (_f1, _f2, _f3) if x is not None]
     if files and stock_df is not None:
         offers = []
         for f in files:
@@ -1737,3 +1741,5 @@ if _page == "download":
         st.session_state["mydata_dl_fp"] = _fp
     _dl = st.session_state["mydata_dl_bytes"]
     st.download_button("حمّل بياناتي.xlsx المحدّث (خزّنه عندك)", _dl, "بياناتي.xlsx")
+
+st.caption(f"نسخة 58.1 · Streamlit {st.__version__}")
